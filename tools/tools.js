@@ -22,19 +22,26 @@ function aesDecrypt(encrypted) {
 
 
 function getOpenid(skey) {
-    return new Promise((resolve,reject) =>{
-        let session_id = JSON.parse(tools.aesDecrypt(skey));
-        let openid = session_id.openid
-        console.log('为什么调用不了');
-        resolve(openid)
-        reject('调用失败')
-    })
-    
-
-
+    let session_id = JSON.parse(aesDecrypt(skey));
+    return session_id.openid;
 }
+
+
+function getNextSequenceValue(model, sequenceName) {//数据库自增标志
+    return new Promise((resolve, reject) => {
+        model.findOneAndUpdate({ _id: sequenceName }, { $inc: { sequence_value: 1 } }, { new: true }, function (err, doc) {
+            if (err) reject(err)
+            else resolve(doc.sequence_value);
+        }
+        )
+    }).catch(err => {
+        console.log(err);
+    })
+}
+// await tools.getNextSequenceValue(countersModel, 'periodid'),
 module.exports = {
     aesEncrypt,
     aesDecrypt,
-    getOpenid
+    getOpenid,
+    getNextSequenceValue
 }

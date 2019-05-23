@@ -44,7 +44,10 @@ const get_skey = async function(code){//得到自定义登录态
     return new Promise((resolve,reject) => {
         get_idKey(url).then((data) =>{
             resolve(tools.aesEncrypt(data));
+            reject(new Error('error'))
          })
+    }).catch(err => {
+        console.log(err);
     })
 }
 

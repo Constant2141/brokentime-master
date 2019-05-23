@@ -11,4 +11,10 @@ connect.on("error",function(){//监听error事件
 connect.on('disconnected',function(){//监听disconnected事件
 console.log('断开连接');
 });
+mongoose.set('useFindAndModify', false);
+
+
+// let now = new Date().toLocaleTimeString()
+// console.log(typeof(now)+now);
+
 module.exports=mongoose;
