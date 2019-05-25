@@ -4,78 +4,49 @@ const auth = require('../tools/wx/auth');
 const models = require('../tools/db')
 const tools = require('../tools/tools')
 
-var { usersModel, periodsModel, tablesModel, countersModel, btablesModel } = models;
+var { usersModel, periodsModel, tablesModel, btablesModel } = models;
 
-router.get('/login', async function (req, res, next) {     //登录态派发
-    const code = await req.query.code;
-    if (code) {
-        let skey = await auth.get_skey(code);
-        let openid = tools.getOpenid(skey)
-        let newUser = new usersModel({
-            openid: openid
+
+router.use(function (req, res, next) {  //统一判断请求中是否有登录态标识
+    let skey = req.body.skey || req.query.skey
+    if (!skey) {
+        res.json({
+            code: 400,
+            msg: "没有携带skey"
         })
-        usersModel.findOne({ openid: openid })
-            .then(doc => {
-                if (!doc) {
-                    console.log('新用户');
-                    newUser.save().then((err, doc) => {
-                        if (err) res.json({
-                            code: 500,
-                            msg: '服务器出错'
-                        })
-                        else res.json({
-                            code: 200,
-                            msg: '新玩家',
-                            flag: 0,
-                            skey: skey
-                        })
-                    })
-                } else {
-                    console.log('老用户');
-                    usersModel.updateOne({ openid: openid }, { $set: { flag: 1 } }, (err, doc) => {
-                        if (err) res.json({
-                            code: 500,
-                            msg: '服务器出错'
-                        })
-                        else {
-                            res.json({
-                                code: 200,
-                                msg: '老玩家',
-                                flag: 1,
-                                skey: skey
-                            })
-                        }
-                    })
-                }
-            })
     }
-
+    next();
 })
-
 
 router.post('/createPeriod', async function (req, res, next) {   //创建周期
     let openid = tools.getOpenid(req.body.skey)
 
     let newPeriod = new periodsModel({
-        openid:openid,
-        lastTime: req.body.lastTime
+        openid: openid,
+        lastTime: req.body.lastTime,
+        createDate:tools.getTime().date,
+        createDay:tools.getTime().day
     })
 
     newPeriod.save().then(pe => {
-        return Promise.all([usersModel.findOne({openid:openid}),pe])
-    }).spread((user,pe) =>{
+        return Promise.all([usersModel.findOne({ openid: openid }), pe])
+    }).spread((user, pe) => {
         user.periods.push(pe);
         user.save()
     }).then(
         res.json({
-            msg:'创建成功'
+            code: 200,
+            msg: '创建周期成功'
         })
     ).catch(err => {
-        console.log(err);
+        res.json({
+            code: 500,
+            msg: "创建周期失败"
+        })
     })
 })
 
-router.post('/createTable', async function (req, res, next) {  //创建日常时间
+router.post('/createTable', async function (req, res, next) {  //创建日常时间 (要指定插入哪个周期)
     let openid = tools.getOpenid(req.body.skey)
     let body = req.body
     let newTable = new tablesModel({
@@ -85,21 +56,22 @@ router.post('/createTable', async function (req, res, next) {  //创建日常时
         affair: body.affair
     })
     newTable.save().then(ta => {
-        return Promise.all([periodsModel.findById(body.period_id),ta])
-    }).spread((pe,ta) => {
+        return Promise.all([periodsModel.findById(body.period_id), ta])
+    }).spread((pe, ta) => {
         pe.tables.push(ta);
         pe.save()
     }).then(
         res.json({
-            msg:'日程表创建成功'
+            code: 200,
+            msg: '日程表创建成功'
         })
     ).catch(err => {
         res.json({
-            msg:'日程表创建失败'
+            code: 500,
+            msg: '日程表创建失败'
         })
     })
 })
-
 
 router.post('/createBTable', async function (req, res, next) {  //创建破碎时间
     let openid = tools.getOpenid(req.body.skey)
@@ -110,42 +82,96 @@ router.post('/createBTable', async function (req, res, next) {  //创建破碎�
         timeEnd: body.timeEnd,
         affair: body.affair
     })
-    
+
     newbTable.save().then(bta => {
-        return Promise.all([periodsModel.findById(body.period_id),bta])
-    }).spread((pe,bta) => {
+        return Promise.all([periodsModel.findById(body.period_id), bta])
+    }).spread((pe, bta) => {
         pe.btables.push(bta);
         pe.save()
     }).then(
         res.json({
-            msg:'破碎表创建成功'
+            code: 200,
+            msg: '破碎表创建成功'
         })
     ).catch(err => {
         res.json({
-            msg:'破碎表创建失败'
+            code: 500,
+            msg: '破碎表创建失败'
         })
     })
 })
 
 
-router.post('/getTable', async function (req, res, next) {   //获取这个周期的大小时间
-    let period_id = req.body.period_id;
 
-    periodsModel.findById(period_id,{tables:1,btables:1}).populate('tables btables','timeStart timeEnd  affair isFinish  score -_id')
-    .exec().then(pe => {
-      res.json({
-       data:pe
+
+router.post('/comment', async function (req, res, next) {  //评分接口 (table_id,score)
+    let body = req.body;
+    let table_id = body.table_id;
+    let score = body.score;
+
+    btablesModel.findByIdAndUpdate(table_id, { $set: { score: score } }).then(data => {
+        res.json({
+            code: 200,
+            msg: '评价成功'
+        })
+    }).catch(err => {
+        res.json({
+            code: 500,
+            msg: err
+        })
+    })
+})
+
+router.post('/calc', async function (req, res, next) {  //计算破碎时间  (period_id)
+    var array = [];
+  
+    let arr = await periodsModel.findById(req.body.period_id).populate('tables', 'timeStart timeEnd  affair -_id')
+      .exec()
+      .then(doc => {
+        return doc.tables
       })
-    }).catch(err =>{
-      res.json({
-        msg :'出错'
-      })
+  
+    for (let i = 0, len = arr.length; i < len - 1; i++) {
+      let tap = arr[i].timeEnd + '-' + arr[i + 1].timeStart
+      array.push(tap)
+    }
+    res.json({
+      data: array
     })
 })
 
 
+router.post('/getPeriod',async function(req,res,next){  //获取这个用户创建过的所有周期的_id ()
+    let openid = tools.getOpenid(req.body.skey)
 
-router.post('/comment',async function(req,res,next){
-    
+    usersModel.findOne({openid:openid})
+    // .populate('periods','_id')
+    // .exec()
+    .then(user => {
+        res.json({
+            data : user.periods
+        })
+    })
 })
+
+
+router.post('/getTable', async function (req, res, next) {   //获取这个周期的创建过的所有信息 （period_id）
+    let period_id = req.body.period_id;
+
+    periodsModel.findById(period_id, { tables: 1, btables: 1 }).populate('tables btables', 'timeStart timeEnd  affair isFinish  score -_id')
+        // .sort({timeStart:-1})
+        .exec().then(pe => {
+            res.json({
+                code: 200,
+                data: pe
+            })
+        }).catch(err => {
+            res.json({
+                code: 500,
+                msg: err
+            })
+        })
+})
+
+
 module.exports = router;

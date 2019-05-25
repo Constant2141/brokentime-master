@@ -23,6 +23,14 @@ schemas.periods = new Schema({ //周期集合
         type: String,
         required: true
     },
+    createDate:{
+        type:String,
+        required:true
+    },
+    createDay:{
+        type:String,
+        required:true
+    },
     tables: [{ type: Schema.Types.ObjectId, ref: 'tables' }],
     btables: [{ type: Schema.Types.ObjectId, ref: 'btables' }]
 

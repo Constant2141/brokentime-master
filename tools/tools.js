@@ -39,9 +39,23 @@ function getNextSequenceValue(model, sequenceName) {//数据库自增标志
     })
 }
 // await tools.getNextSequenceValue(countersModel, 'periodid'),
+
+function getTime() {
+    var myDate = new Date();
+    let date = myDate.getMonth() + 1 + '.' + myDate.getDate()
+    let day =myDate.getDay()
+    return {
+        date,//当前月日
+        day//当前星期几
+    };
+}
+
+
+
 module.exports = {
     aesEncrypt,
     aesDecrypt,
     getOpenid,
-    getNextSequenceValue
+    getNextSequenceValue,
+    getTime
 }

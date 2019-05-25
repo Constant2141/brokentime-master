@@ -3,8 +3,7 @@ var router = express.Router();
 const auth = require('../tools/wx/auth');
 const models = require('../tools/db')
 const tools = require('../tools/tools')
-
-var { usersModel } = models;
+var { usersModel, periodsModel, tablesModel, btablesModel } = models;
 
 
 
@@ -12,7 +11,7 @@ var { usersModel } = models;
 
 router.post('/getUser', function (req, res, next) {
   let openid = tools.getOpenid(req.body.skey)
-  usersModel.findById('5ce67dc914e88a2abc401598',{_id:0,openid:0}).then(user => {
+  usersModel.findById('5ce67dc914e88a2abc401598', { _id: 0, openid: 0 }).then(user => {
     res.json({
       msg: user
     })
@@ -28,18 +27,8 @@ router.post('/getUser', function (req, res, next) {
   //   })
   // })
 
-   
+
 
 })
-
-router.post('/insert',function(req,res,next){
-  var tom = new usersModel({openid:"123"});
-  tom.save().then(function(user) {
-    return Promise.all([user]);
-  }).then(function(user) {
-    console.log(user);
-  })
-})
-
 
 module.exports = router;

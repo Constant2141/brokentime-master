@@ -1,6 +1,6 @@
 const mongoose=require('mongoose');
 mongoose.connect('mongodb://localhost:27017/broken_time',{ useNewUrlParser: true });//连接到数据库
-
+mongoose.Promise = require('bluebird');
 var connect = mongoose.connection;
 connect.on("connected",function(){//监听connected事件
     // console.log("连接数据库成功");
@@ -14,7 +14,5 @@ console.log('断开连接');
 mongoose.set('useFindAndModify', false);
 
 
-// let now = new Date().toLocaleTimeString()
-// console.log(typeof(now)+now);
 
 module.exports=mongoose;
