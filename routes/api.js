@@ -156,7 +156,7 @@ router.post('/calc', async function (req, res, next) {  //计算破碎时间  (p
 router.post('/getTable', async function (req, res, next) {   //获取这个周期的创建过的所有信息 （period_id）
     let period_id = req.body.period_id;
 
-    periodsModel.findById(period_id, { tables: 1, btables: 1 }).populate('tables btables', 'timeStart timeEnd  affair isFinish  score -_id')
+    periodsModel.findById(period_id, {}).populate('tables btables', 'timeStart timeEnd  affair isFinish  score -_id')
         // .sort({timeStart:-1})
         .exec().then(pe => {
             res.json({
@@ -170,6 +170,36 @@ router.post('/getTable', async function (req, res, next) {   //获取这个周�
             })
         })
 })
+router.post('/history',async function(req, res, next){
+    let skey = req.body.skey;
+    let openid = tools.getOpenid(skey)
+    let periodsID = [];
+    let periods = [];
 
+    await usersModel.findOne({ openid: openid }).then(doc => {
+        periodsID = doc.periods
+    })
+    .then(()=>{
+        periodsID.forEach((val,idx) => {
+           periodsModel.findById(val,{}).populate('tables btables', 'timeStart timeEnd  affair isFinish  score -_id')
+           .exec()
+           .then(data => {
+                periods.push(data);
+                if(idx == periodsID.length-1){
+                    res.json({
+                        code:200,
+                        data:periods
+                    })
+                }
+           })
+        })
+    })
+    .catch(err => {
+        res.json({
+            code: 500,
+            msg: "periods "+err
+        })
+    })
+})
 
 module.exports = router;
