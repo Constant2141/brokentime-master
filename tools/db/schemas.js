@@ -14,7 +14,7 @@ schemas.users = new Schema({ //用户信息集合
     periods: [{ type: Schema.Types.ObjectId, ref: 'periods' }]
 });
 
-schemas.periods = new Schema({ //周期集合
+schemas.periods = new Schema({       //周期集合
     openid:{
         type: String,
         required: true,
@@ -31,7 +31,11 @@ schemas.periods = new Schema({ //周期集合
         type:String,
         required:true
     },
-    score:{
+    endDay:{
+        type:String,
+        required:true
+    },
+    score:{  //周期的总评价
         type:String,
         default:0
     },
