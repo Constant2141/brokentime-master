@@ -104,21 +104,31 @@ router.post('/createBTable', async function (req, res, next) {  //创建破碎�
 
 
 
-router.post('/comment', async function (req, res, next) {  //评分接口 (table_id,score)
-    let body = req.body;
-    let table_id = body.table_id;
-    let score = body.score;
+// router.post('/comment', async function (req, res, next) {  //评分接口 (table_id,score)
+//     let body = req.body;
+//     let table_id = body.table_id;
+//     let score = body.score;
 
-    btablesModel.findByIdAndUpdate(table_id, { $set: { score: score } }).then(data => {
-        res.json({
-            code: 200,
-            msg: '评价成功'
-        })
-    }).catch(err => {
-        res.json({
-            code: 500,
-            msg: err
-        })
+//     btablesModel.findByIdAndUpdate(table_id, { $set: { score: score } }).then(data => {
+//         res.json({
+//             code: 200,
+//             msg: '评价成功'
+//         })
+//     }).catch(err => {
+//         res.json({
+//             code: 500,
+//             msg: err
+//         })
+//     })
+// })
+
+router.post('/comment',async function(req,res,next){
+    let period_id = req.body.period_id;
+    let arr = [25,50,25,100];
+    let pe = await periodsModel.findById(period_id).then()
+
+    res.json({
+        data : pe
     })
 })
 
@@ -141,18 +151,6 @@ router.post('/calc', async function (req, res, next) {  //计算破碎时间  (p
 })
 
 
-router.post('/getPeriod',async function(req,res,next){  //获取这个用户创建过的所有周期的_id ()
-    let openid = tools.getOpenid(req.body.skey)
-
-    usersModel.findOne({openid:openid})
-    // .populate('periods','_id')
-    // .exec()
-    .then(user => {
-        res.json({
-            data : user.periods
-        })
-    })
-})
 
 
 router.post('/getTable', async function (req, res, next) {   //获取这个周期的创建过的所有信息 （period_id）

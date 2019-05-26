@@ -23,13 +23,17 @@ schemas.periods = new Schema({ //周期集合
         type: String,
         required: true
     },
-    createDate:{
+    createDate:{//创建的日期，例如，例如5.25
         type:String,
         required:true
     },
-    createDay:{
+    createDay:{//创建的星期几，例如，
         type:String,
         required:true
+    },
+    score:{
+        type:String,
+        default:0
     },
     tables: [{ type: Schema.Types.ObjectId, ref: 'tables' }],
     btables: [{ type: Schema.Types.ObjectId, ref: 'btables' }]
