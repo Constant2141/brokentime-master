@@ -62,6 +62,10 @@ schemas.tables = new Schema({  //日常时间集合
         type: String,
         required: true
     },
+    createDate:{//创建的日期，例如，例如5.25
+        type:String,
+        required:true
+    },
 })
 
 schemas.btables = new Schema({  //破碎时间集合
@@ -84,6 +88,10 @@ schemas.btables = new Schema({  //破碎时间集合
     score: { //完成后对这个事件利用率的评价
         type: Number,
         default: 0
+    },
+    createDate:{//创建的日期，例如，例如5.25
+        type:String,
+        required:true
     },
 })
 

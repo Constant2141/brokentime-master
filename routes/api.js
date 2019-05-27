@@ -20,14 +20,14 @@ router.use(function (req, res, next) {  //统一判断请求中是否有登录�
 
 router.post('/createPeriod', async function (req, res, next) {   //创建周期(lastTime)
     let openid = tools.getOpenid(req.body.skey)
+   
 
     let newPeriod = new periodsModel({
         openid: openid,
         lastTime: req.body.lastTime,
         createDate: tools.getNowTime().date,
         createDay: tools.getNowTime().day,
-        endDay: tools.getEndTime(req.body.lastTime)
-
+        endDay: tools.getEndTime(req.body.lastTime),
     })
 
     newPeriod.save().then(pe => {
@@ -51,56 +51,90 @@ router.post('/createPeriod', async function (req, res, next) {   //创建周期(
 router.post('/createTable', async function (req, res, next) {  //创建日常时间 (period_id)
     let openid = tools.getOpenid(req.body.skey)
     let body = req.body
-    let newTable = new tablesModel({
-        openid: openid,
-        timeStart: body.timeStart,
-        timeEnd: body.timeEnd,
-        affair: body.affair
-    })
-    newTable.save().then(ta => {
-        return Promise.all([periodsModel.findById(body.period_id), ta])
-    }).spread((pe, ta) => {
-        pe.tables.push(ta);
-        pe.save()
-    }).then(
-        res.json({
-            code: 200,
-            msg: '日程表创建成功'
-        })
-    ).catch(err => {
-        res.json({
-            code: 500,
-            msg: '日程表创建失败'
-        })
-    })
+    let mockarr = [[{}, {}], [{}], [{}, {}]] //模拟前端最后发送的格式
+    let  arr = req.body.arr||mockarr;       //如果请求里面有这个字段，就用请求的数据arr
+
+    let findPeriod = await  periodsModel.findById(body.period_id); //先获取到指定周期对象
+
+    for (let i = 0, len = arr.length; i < len; i++) {
+        for (let j = 0, len2 = arr[i].length; j < len2; j++) {
+
+            let newTable = new tablesModel({
+                openid: openid,
+                timeStart: arr[i][j].timeStart,
+                timeEnd: arr[i][j].timeEnd,
+                affair: arr[i][j].affair,
+                createDate: tools.getEndTime(i),
+            })
+            newTable.save().then(ta => {
+                return Promise.all([findPeriod, ta])
+            }).spread((pe, ta) => {
+                pe.tables.push(ta);
+                pe.save()
+            }).then()
+              .catch(err => {
+                res.json({
+                    code: 500,
+                    msg: '日程表创建失败'
+                })
+            })
+
+
+        }
+        if(i == len){
+            res.json({
+                code: 200,
+                msg: '日程表创建成功'
+            })
+        }
+
+    }
+
+
+
 })
 
 router.post('/createBTable', async function (req, res, next) {  //创建破碎时间(period_id)
     let openid = tools.getOpenid(req.body.skey)
     let body = req.body
-    let newbTable = new btablesModel({
-        openid: openid,
-        timeStart: body.timeStart,
-        timeEnd: body.timeEnd,
-        affair: body.affair
-    })
 
-    newbTable.save().then(bta => {
-        return Promise.all([periodsModel.findById(body.period_id), bta])
-    }).spread((pe, bta) => {
-        pe.btables.push(bta);
-        pe.save()
-    }).then(
-        res.json({
-            code: 200,
-            msg: '破碎表创建成功'
-        })
-    ).catch(err => {
-        res.json({
-            code: 500,
-            msg: '破碎表创建失败'
-        })
-    })
+    let mockarr = [[{}, {}], [{}], [{}, {}]] //模拟前端最后发送的大事件格式
+
+    let  arr = req.body.arr||mockarr;       //如果请求里面有这个字段，就用请求的数据arr
+
+
+    for (let i = 0, len = arr.length; i < len; i++) {
+        for (let j = 0, len2 = arr[i].length; j < len2; j++) {
+
+            let newbTable = new btablesModel({
+                openid: openid,
+                timeStart: arr[i][j].timeStart,
+                timeEnd: arr[i][j].timeEnd,
+                affair: arr[i][j].affair,
+                createDate: tools.getEndTime(i),
+            })
+
+            newbTable.save().then(bta => {
+                return Promise.all([periodsModel.findById(body.period_id), bta])
+            }).spread((pe, bta) => {
+                pe.btables.push(bta);
+                pe.save()
+            }).then()
+              .catch(err => {
+                res.json({
+                    code: 500,
+                    msg: '破碎表创建失败'
+                })
+            })
+
+        }
+        if(i == len){
+            res.json({
+                code: 200,
+                msg: '破碎表创建成功'
+            })
+        }
+    }
 })
 
 
@@ -118,7 +152,7 @@ router.post('/comment', async function (req, res, next) { //评分接口  (perio
 
     var totalTime = 0; //记录总的破碎时间长度
     var effectTime = 0;
-    let result =  pe.btables.map(async function (item, index) {
+    pe.btables.map(async function (item, index) {
         let bta = await btablesModel.findByIdAndUpdate(item._id, { $set: { score: arr[index] } })
             .then()
             .catch(err => {
@@ -190,7 +224,9 @@ router.post('/getTable', async function (req, res, next) {   //获取这个周�
             })
         })
 })
-router.post('/history',async function(req, res, next){
+
+
+router.post('/history', async function (req, res, next) {
     let skey = req.body.skey;
     let openid = tools.getOpenid(skey)
     let periodsID = [];
@@ -199,27 +235,27 @@ router.post('/history',async function(req, res, next){
     await usersModel.findOne({ openid: openid }).then(doc => {
         periodsID = doc.periods
     })
-    .then(()=>{
-        periodsID.forEach((val,idx) => {
-           periodsModel.findById(val,{}).populate('tables btables', 'timeStart timeEnd  affair isFinish  score -_id')
-           .exec()
-           .then(data => {
-                periods.push(data);
-                if(idx == periodsID.length-1){
-                    res.json({
-                        code:200,
-                        data:periods
+        .then(() => {
+            periodsID.forEach((val, idx) => {
+                periodsModel.findById(val, {}).populate('tables btables', 'timeStart timeEnd  affair isFinish  score -_id')
+                    .exec()
+                    .then(data => {
+                        periods.push(data);
+                        if (idx == periodsID.length - 1) {
+                            res.json({
+                                code: 200,
+                                data: periods
+                            })
+                        }
                     })
-                }
-           })
+            })
         })
-    })
-    .catch(err => {
-        res.json({
-            code: 500,
-            msg: "periods "+err
+        .catch(err => {
+            res.json({
+                code: 500,
+                msg: "periods " + err
+            })
         })
-    })
 })
 
 module.exports = router;
